@@ -49,7 +49,7 @@ services:
     image: trainer_ia:latest
     container_name: trainer
     ports:
-      -"6006:6006"
+      - "6006:6006"
     volumes:
       - ./shared_data:/workspace
     # Initialize Tensorboard
