@@ -43,7 +43,7 @@ services:
       stack: 67108864
 
     # Comando padrao ao iniciar (pode ser alterado para rodar um script especifico)
-    command: python src/train.py --config config/server.yaml
+    command: tail -f /dev/null
   
   # Servico exclusivo do Tensorboard
   tensorboard:
