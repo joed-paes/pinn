@@ -1,0 +1,9 @@
+{
+  "experiment_name": "2026-10-09_10-10-15_pinn_local_epochs=2_model={'name': 'simple_pinn', 'layers': [2, 3, 64, 1], 'activation': 'tanh', 'initializer': 'Xavier Normal'}",
+  "config_hash": "464bc439df53",
+  "git_commit": "ed36b2d3d3e0319063bf373cbb2b30c467cf6357",
+  "git_dirty": true,
+  "finished_at": "2026-10-09T10:10:15.619981",
+  "status": "dry_run",
+  "n_params": 8577
+}

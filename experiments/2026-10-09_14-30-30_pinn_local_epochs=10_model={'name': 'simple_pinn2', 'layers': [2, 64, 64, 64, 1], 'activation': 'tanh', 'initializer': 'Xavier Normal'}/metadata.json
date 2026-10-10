@@ -1,0 +1,9 @@
+{
+  "experiment_name": "2026-10-09_14-30-30_pinn_local_epochs=10_model={'name': 'simple_pinn2', 'layers': [2, 64, 64, 64, 1], 'activation': 'tanh', 'initializer': 'Xavier Normal'}",
+  "config_hash": "289a8cfcd46c",
+  "git_commit": "ed36b2d3d3e0319063bf373cbb2b30c467cf6357",
+  "git_dirty": true,
+  "finished_at": "2026-10-09T14:30:30.848526",
+  "status": "failed",
+  "error": "Expected all tensors to be on the same device, but got mat1 is on cuda:0, different from other tensors on cpu (when checking argument in method wrapper_CUDA_addmm)"
+}

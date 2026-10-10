@@ -1,0 +1,9 @@
+{
+  "experiment_name": "2026-10-09_10-41-52_pinn_local_epochs=2_model={'name': 'simple_pinn2', 'layers': [2, 64, 64, 64, 1], 'activation': 'tanh', 'initializer': 'Xavier Normal'}",
+  "config_hash": "2085d30365f0",
+  "git_commit": "ed36b2d3d3e0319063bf373cbb2b30c467cf6357",
+  "git_dirty": true,
+  "finished_at": "2026-10-09T10:41:52.298151",
+  "status": "failed",
+  "error": "too many values to unpack (expected 2)"
+}

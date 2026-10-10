@@ -1,0 +1,31 @@
+# Usa a imagem da NVIDIA que funcionou na RTX 5070
+FROM nvcr.io/nvidia/pytorch:25.01-py3
+
+# Define o fuso horario e evita travamentos de prompts interativos na instalacao de pacotes
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=America/Sao_Paulo
+
+# Atualiza o sistema e instala dependencias basicas do Linux (caso precise de opencv, git, etc.)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    tmux \
+    htop \
+    && rm -rf /var/lib/apt/lists/*
+
+# Define o diretorio de trabalho dentro do container
+WORKDIR /workspace
+
+# Copia o arquivo de requisitos e instala as bibliotecas do Python
+# (Criamos essa etapa antes de copiar o codigo para aproveitar o cache do Docker)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Essencial para que o DeepXDE use o Pytorch por padrão
+ENV DDE_BACKEND=pytorch
+
+# 7. Copia o restante dos seus arquivos de codigo locais para dentro do container
+COPY . .
+
+# 7. Define o comando padrao ao iniciar o container (abre o terminal interativo do Python)
+CMD ["python3"]

@@ -1,0 +1,85 @@
+# config/default.yaml - PINN
+# Configurações compartilhadas entre workstation e GPU-server.
+# NÃO coloque caminhos absolutos aqui — use local.yaml / server.yaml para isso.
+
+# --- Reproductibility ---
+seed: 42
+deterministic: true          # true = ativa cudnn.deterministic na GPU-server
+
+# --- Model ---
+model:
+  name: simple_pinn2
+  layers: [2, 64, 64, 64, 1]  # [input=2, hidden[1]=64, ..., hidden[n]=64, output=1]
+  activation: tanh
+  initializer: Xavier Normal  # Xavier Normal, Glorot uniform
+
+# --- Optimization ---
+criterion:
+  name: l2_norm     # entropy; l2_norm; sobolev; ...
+
+optimizer:
+  name: adam
+  learning_rate: 0.001
+  weight_decay: 0.0
+lbfgs:
+  enabled: true
+  max_iter: 5000
+
+scheduler:
+  name: null                 # ex: "step", "cosine"
+  step_size: 10
+  gamma: 0.1
+
+loss:
+  name: null
+
+loss_weights:
+  pde: 1.0
+  ic: 1.0
+  bc: 1.0
+
+pde:
+  name: burger
+  params:
+    nu: 0.01
+    n_x: 1
+
+# Geometry and collocation point sampling
+geometry:
+  name: interval_1d_time
+  sampling_method: latin_hypercube # latin_hypercube, uniform
+  x_min: -3.0
+  x_max: 3.0
+  t_min: 0.0
+  t_max: 1.0
+
+sampling:
+  num_domain: 2000
+  num_boundary: 100
+  num_initial: 100
+  num_test: 500
+  resample_every: null  # null = sem resample; int = resample at N epochs
+  geometric: false
+
+# --- Training ---
+epochs: 10000
+log_interval: 1000            # batches entre logs
+
+# --- Validation ---
+val_every_epoch: true
+save_best: true
+save_last: true
+save_every_epoch: false
+
+# --- Experiments ---
+experiment:
+  name_prefix: pinn_burger
+
+# --- Logging ---
+logging:
+  level: INFO
+  save_metrics_jsonl: true
+
+# --- Tensorboard ---
+tensorboard:
+  enable: true

@@ -1,0 +1,56 @@
+services:
+  trainer:
+    # Opcao 1: Se quiser que ele faca o build automatico usando o seu Dockerfile local
+    build:
+      context: .
+      dockerfile: Dockerfile.pinn
+    # Configuracao para reiniciar o docker se o servidor cair ou for reiniciado
+    restart: unless-stopped
+    
+    # Nome que a imagem final tera
+    image: trainer_ia:latest
+    
+    # Mantem o container aberto em modo interativo (equivalente ao -it)
+    stdin_open: true
+    tty: true
+    
+    # Define o diretorio padrao dentro do container
+    working_dir: /workspace
+    
+    # Mapeia a sua pasta local atual para dentro do container (equivalente ao -v)
+    volumes:
+      - ./datasets:/workspace/datasets
+      - ./checkpoints:/workspace/checkpoints
+      - ./experiments:/workspace/experiments
+
+    # Configuracao crucial para liberar o uso da sua RTX 5070 (equivalente ao --gpus all)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    # Resolve o problema do SHMEM limit de 64MB (equivalente ao --ipc=host)
+    ipc: host
+
+    # Otimizacoes de limites de memoria recomendadas pela NVIDIA (equivalente aos --ulimit)
+    ulimits:
+      memlock: -1
+      stack: 67108864
+
+    # Comando padrao ao iniciar (pode ser alterado para rodar um script especifico)
+    command: python3
+  
+  # Servico exclusivo do Tensorboard
+  tensorboard:
+    image: trainer_ia:latest
+    container_name: trainer
+    ports:
+      -"6006:6006"
+    volumes:
+      - ./shared_data:/workspace
+    # Initialize Tensorboard
+    command: tensorboard --logdir=/workspace/experiments/tensorboard/pinn --bind_all
+    restart: unless-stopped

@@ -1,0 +1,23 @@
+commit: ed36b2d3d3e0319063bf373cbb2b30c467cf6357
+branch: main
+is_dirty: true
+diff: ''
+status: '?? Dockerfile.pinn
+
+  ?? checkpoints/
+
+  ?? config/
+
+  ?? docker-compose.yml
+
+  ?? experiments/
+
+  ?? notebooks/
+
+  ?? requirements.txt
+
+  ?? scripts/
+
+  ?? src/
+
+  ?? tests/'

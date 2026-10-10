@@ -1,0 +1,16 @@
+torch
+torchvision
+tensorboard
+jupyterlab
+uvicorn
+transformers
+datasets
+accelerate
+scikit-learn
+pandas
+numpy
+seaborn
+matplotlib
+PyYAML
+pytest
+deepxde

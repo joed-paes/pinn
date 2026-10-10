@@ -1,0 +1,67 @@
+seed: 42
+deterministic: true
+model:
+  name: simple_pinn2
+  layers:
+  - 2
+  - 64
+  - 64
+  - 64
+  - 1
+  activation: tanh
+  initializer: Xavier Normal
+criterion:
+  name: l2_norm
+optimizer:
+  name: adam
+  learning_rate: 0.001
+  weight_decay: 0.0
+lbfgs:
+  enabled: true
+  max_iter: 5000
+scheduler:
+  name: null
+  step_size: 10
+  gamma: 0.1
+loss:
+  name: null
+loss_weights:
+  pde: 1.0
+  ic: 1.0
+  bc: 1.0
+pde:
+  name: burger
+  params:
+    nu: 0.01
+    n_x: 1
+geometry:
+  name: interval_1d_time
+  sampling_method: latin_hypercube
+  x_min: -3.0
+  x_max: 3.0
+  t_min: 0.0
+  t_max: 1.0
+sampling:
+  num_domain: 200
+  num_boundary: 20
+  num_initial: 20
+  num_test: 100
+  resample_every: null
+  geometric: false
+epochs: 10000
+log_interval: 1000
+val_every_epoch: true
+save_best: true
+save_last: true
+save_every_epoch: false
+experiment:
+  name_prefix: pinn_local
+logging:
+  level: DEBUG
+  save_metrics_jsonl: true
+data_path: ./data
+experiment_path: ./experiments
+checkpoint_path: ./checkpoints
+device: cpu
+dataset:
+  subset_size: null

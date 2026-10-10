@@ -1,0 +1,51 @@
+# config/server.yaml
+# Configuração para treino completo na GPU-server (CUDA, dataset completo).
+# Herda de default.yaml e sobrescreve apenas o que muda.
+
+# --- Caminhos absolutos dentro do container Docker ---
+# Refletem os volumes montados em run_container.sh:
+#   -v $(pwd)/datasets:/workspace/datasets
+#   -v $(pwd)/experiments:/workspace/experiments
+#   -v $(pwd)/checkpoints:/workspace/checkpoints
+data_path: "/workspace/data"
+experiment_path: "/workspace/experiments"
+checkpoint_path: "/workspace/checkpoints"
+
+# --- Ambiente ---
+device: cuda
+
+# --- Treino completo ---
+epochs: 60000
+log_interval: 2000
+
+lbfgs:
+  enabled: true
+  max_iter:10000
+
+optimizer:
+  name: adam
+  learning_rate: 0.001
+  weight_decay: 0.0001
+
+scheduler:
+  name: cosine
+  step_size: 10
+  gamma: 0.1
+
+# --- Sampling Information ---
+sampling:
+  num_domain: 5000
+  num_boundary: 200
+  num_initial: 200
+  num_test: 2000
+
+dataset:
+  subset_size: null          # dataset completo
+
+# --- Experimento ---
+experiment:
+  name_prefix: pinn_server
+
+# --- Logging ---
+logging:
+  level: INFO

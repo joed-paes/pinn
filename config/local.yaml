@@ -1,0 +1,33 @@
+# config/local.yaml
+# Configuracao para desenvolvimento/verificacao na workstation (CPU, subset).
+# Herda de default.yaml e sobrescreve apenas o que muda.
+
+# --- Caminhos locais (relativos a raiz do projeto) ---
+data_path: "./data"
+experiment_path: "./experiments"
+checkpoint_path: "./checkpoints"
+
+# --- Ambiente ---
+device: cpu
+
+# --- Treino reduzido para verificacao rapida ---
+epochs: 2
+
+# --- Sampling Information ---
+sampling:
+  num_domain: 200
+  num_boundary: 20
+  num_initial: 20
+  num_test: 100
+
+# --- Optional: Inclusion of data to training process, like usage of characteristic curves
+dataset:
+  subset_size: null          # dataset completo
+
+# --- Experimento ---
+experiment:
+  name_prefix: pinn_local
+
+# --- Logging ---
+logging:
+  level: DEBUG

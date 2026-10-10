@@ -1,0 +1,13 @@
+{
+  "experiment_name": "2026-10-09_10-57-29_pinn_local_epochs=2_model={'name': 'simple_pinn2', 'layers': [2, 64, 64, 64, 1], 'activation': 'tanh', 'initializer': 'Xavier Normal'}",
+  "config_hash": "95dd48b48787",
+  "git_commit": "ed36b2d3d3e0319063bf373cbb2b30c467cf6357",
+  "git_dirty": true,
+  "finished_at": "2026-10-09T10:57:29.937551",
+  "status": "completed",
+  "best_loss": 0.48150432109832764,
+  "epochs": 2,
+  "total_time_s": 0.22,
+  "n_params": 8577,
+  "device": "cuda"
+}

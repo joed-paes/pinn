@@ -1,0 +1,9 @@
+[Experiment] name=2026-10-09_10-39-45_pinn_local_epochs=2_model={'name': 'simple_pinn2', 'layers': [2, 64, 64, 64, 1], 'activation': 'tanh', 'initializer': 'Xavier Normal'}
+[Experiment] dir=experiments/2026-10-09_10-39-45_pinn_local_epochs=2_model={'name': 'simple_pinn2', 'layers': [2, 64, 64, 64, 1], 'activation': 'tanh', 'initializer': 'Xavier Normal'}
+[Experiment] config_hash=2085d30365f0
+[Experiment] git_commit=ed36b2d3d3e0319063bf373cbb2b30c467cf6357
+[Experiment] git_dirty=True
+[Experiment] ⚠️  Working tree sujo — reprodução exata requer o diff salvo em git_info.yaml
+[Model] simple_pinn2 | params treináveis: 8,577
+[Dry-run] Config e modelo OK. Encerrando sem treinar.
+[Experiment] Finalizado: experiments/2026-10-09_10-39-45_pinn_local_epochs=2_model={'name': 'simple_pinn2', 'layers': [2, 64, 64, 64, 1], 'activation': 'tanh', 'initializer': 'Xavier Normal'}

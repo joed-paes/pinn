@@ -1,0 +1,13 @@
+[Experiment] name=2026-10-09_14-35-57_pinn_local_epochs=10_model={'name': 'simple_pinn2', 'layers': [2, 64, 64, 64, 1], 'activation': 'tanh', 'initializer': 'Xavier Normal'}
+[Experiment] dir=experiments/2026-10-09_14-35-57_pinn_local_epochs=10_model={'name': 'simple_pinn2', 'layers': [2, 64, 64, 64, 1], 'activation': 'tanh', 'initializer': 'Xavier Normal'}
+[Experiment] config_hash=289a8cfcd46c
+[Experiment] git_commit=ed36b2d3d3e0319063bf373cbb2b30c467cf6357
+[Experiment] git_dirty=True
+[Experiment] ⚠️  Working tree sujo — reprodução exata requer o diff salvo em git_info.yaml
+[Model] simple_pinn2 | params treináveis: 8,577
+
+===== Epoch 1/10 =====
+[Epoch 1] pde_loss=0.4958 pde_loss=0.0003 | IC_loss=0.4917 BC_loss=0.0038 | lr=0.001000 | Epoch time=0.1s
+
+[ERRO] Treino interrompido: 'float' object has no attribute 'item'
+[Experiment] Finalizado: experiments/2026-10-09_14-35-57_pinn_local_epochs=10_model={'name': 'simple_pinn2', 'layers': [2, 64, 64, 64, 1], 'activation': 'tanh', 'initializer': 'Xavier Normal'}

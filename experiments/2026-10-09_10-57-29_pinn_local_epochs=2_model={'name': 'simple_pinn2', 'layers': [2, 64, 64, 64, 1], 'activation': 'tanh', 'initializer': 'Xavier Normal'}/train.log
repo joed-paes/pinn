@@ -1,0 +1,24 @@
+[Experiment] name=2026-10-09_10-57-29_pinn_local_epochs=2_model={'name': 'simple_pinn2', 'layers': [2, 64, 64, 64, 1], 'activation': 'tanh', 'initializer': 'Xavier Normal'}
+[Experiment] dir=experiments/2026-10-09_10-57-29_pinn_local_epochs=2_model={'name': 'simple_pinn2', 'layers': [2, 64, 64, 64, 1], 'activation': 'tanh', 'initializer': 'Xavier Normal'}
+[Experiment] config_hash=95dd48b48787
+[Experiment] git_commit=ed36b2d3d3e0319063bf373cbb2b30c467cf6357
+[Experiment] git_dirty=True
+[Experiment] ⚠️  Working tree sujo — reprodução exata requer o diff salvo em git_info.yaml
+[Model] simple_pinn2 | params treináveis: 8,577
+
+===== Epoch 1/2 =====
+/home/joed/pyenvs/torchenv/lib/python3.14/site-packages/torch/autograd/graph.py:979: UserWarning: Attempting to run cuBLAS, but there was no current CUDA context! Attempting to set the primary context... (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/cuda/CublasHandlePool.cpp:408.)
+  return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+[Epoch 1] pde_loss=0.4958 pde_loss=0.0003 | IC_loss=0.4917 BC_loss=0.0038 | lr=0.001000 | Epoch time=0.2s
+[Experiment] Checkpoint salvo: experiments/2026-10-09_10-57-29_pinn_local_epochs=2_model={'name': 'simple_pinn2', 'layers': [2, 64, 64, 64, 1], 'activation': 'tanh', 'initializer': 'Xavier Normal'}/checkpoints/last.pth
+[Experiment] Checkpoint salvo: experiments/2026-10-09_10-57-29_pinn_local_epochs=2_model={'name': 'simple_pinn2', 'layers': [2, 64, 64, 64, 1], 'activation': 'tanh', 'initializer': 'Xavier Normal'}/checkpoints/best.pth
+  [Checkpoint] Novo best: loss=0.4958
+
+===== Epoch 2/2 =====
+[Epoch 2] pde_loss=0.4815 pde_loss=0.0004 | IC_loss=0.4740 BC_loss=0.0071 | lr=0.001000 | Epoch time=0.0s
+[Experiment] Checkpoint salvo: experiments/2026-10-09_10-57-29_pinn_local_epochs=2_model={'name': 'simple_pinn2', 'layers': [2, 64, 64, 64, 1], 'activation': 'tanh', 'initializer': 'Xavier Normal'}/checkpoints/last.pth
+[Experiment] Checkpoint salvo: experiments/2026-10-09_10-57-29_pinn_local_epochs=2_model={'name': 'simple_pinn2', 'layers': [2, 64, 64, 64, 1], 'activation': 'tanh', 'initializer': 'Xavier Normal'}/checkpoints/best.pth
+  [Checkpoint] Novo best: loss=0.4815
+
+[Treino] Concluido em 0.2s | best_loss=0.4815
+[Experiment] Finalizado: experiments/2026-10-09_10-57-29_pinn_local_epochs=2_model={'name': 'simple_pinn2', 'layers': [2, 64, 64, 64, 1], 'activation': 'tanh', 'initializer': 'Xavier Normal'}
