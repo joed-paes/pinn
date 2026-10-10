@@ -19,6 +19,7 @@ services:
     
     # Mapeia a sua pasta local atual para dentro do container (equivalente ao -v)
     volumes:
+      - ./config:/workspace/config
       - ./datasets:/workspace/datasets
       - ./checkpoints:/workspace/checkpoints
       - ./experiments:/workspace/experiments

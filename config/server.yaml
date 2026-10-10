@@ -20,7 +20,7 @@ log_interval: 2000
 
 lbfgs:
   enabled: true
-  max_iter:10000
+  max_iter: 10000
 
 optimizer:
   name: adam
