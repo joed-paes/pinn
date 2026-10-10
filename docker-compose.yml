@@ -7,8 +7,9 @@ services:
     # Configuracao para reiniciar o docker se o servidor cair ou for reiniciado
     restart: unless-stopped
     
-    # Nome que a imagem final tera
+    # Nome da imagem final e do container
     image: trainer_ia:latest
+    container_name: trainer_service
     
     # Mantem o container aberto em modo interativo (equivalente ao -it)
     stdin_open: true
@@ -42,16 +43,17 @@ services:
       stack: 67108864
 
     # Comando padrao ao iniciar (pode ser alterado para rodar um script especifico)
-    command: python3
+    command: python3 src/train.py
   
   # Servico exclusivo do Tensorboard
   tensorboard:
     image: trainer_ia:latest
-    container_name: trainer
+    container_name: tensorboard_service
     ports:
       - "6006:6006"
     volumes:
-      - ./shared_data:/workspace
+      - ./experiments:/workspace/experiments
+    working_dir: /workspace
     # Initialize Tensorboard
     command: tensorboard --logdir=/workspace/experiments/tensorboard/pinn --bind_all
     restart: unless-stopped
