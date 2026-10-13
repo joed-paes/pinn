@@ -1,0 +1,81 @@
+commit: a5ab2bd79d091dcd4b00498d4cee19dfba9dca5e
+branch: main
+is_dirty: true
+diff: "diff --git a/Dockerfile.pinn b/Dockerfile.pinn\nindex 3f31be7..847618d 100644\n\
+  --- a/Dockerfile.pinn\n+++ b/Dockerfile.pinn\n@@ -27,5 +27,5 @@ ENV DDE_BACKEND=pytorch\n\
+  \ # 7. Copia o restante dos seus arquivos de codigo locais para dentro do container\n\
+  \ COPY . .\n \n-# 7. Define o comando padrao ao iniciar o container (abre o terminal\
+  \ interativo do Python)\n-CMD [\"python3\"]\n\\ No newline at end of file\n+# 7.\
+  \ Define o comando padrao ao iniciar o container\n+CMD [\"tail -f /dev/null\"]\n\
+  \\ No newline at end of file\ndiff --git a/checkpoints/mnist_cnn.pth b/checkpoints/mnist_cnn.pth\n\
+  deleted file mode 100644\nindex 221fd11..0000000\nBinary files a/checkpoints/mnist_cnn.pth\
+  \ and /dev/null differ\ndiff --git a/config/default.yaml b/config/default.yaml\n\
+  index 4a20d28..eefc685 100644\n--- a/config/default.yaml\n+++ b/config/default.yaml\n\
+  @@ -82,4 +82,5 @@ logging:\n \n # --- Tensorboard ---\n tensorboard:\n-  enable:\
+  \ true\n\\ No newline at end of file\n+  enable: true\n+  name_prefix: pinn_board\n\
+  \\ No newline at end of file\ndiff --git a/docker-compose.yml b/docker-compose.yml\n\
+  index 3e50d45..c3eeedb 100644\n--- a/docker-compose.yml\n+++ b/docker-compose.yml\n\
+  @@ -42,7 +42,9 @@ services:\n       memlock: -1\n       stack: 67108864\n \n-  \
+  \  # Comando padrao ao iniciar (pode ser alterado para rodar um script especifico)\n\
+  +    # Comando padrao ao iniciar (e.g., pode ser alterado para rodar um script especifico)\n\
+  +    # >> tail -f /dev/null -- abre um arquivo nulo do sistema e fica \"escutando\"\
+  \ eternamente em background. \n+    # Consome 0% de CPU e mantém o container vivo\
+  \ de forma invisível.\n     command: tail -f /dev/null\n   \n   # Servico exclusivo\
+  \ do Tensorboard\ndiff --git a/src/__pycache__/train.cpython-314.pyc b/src/__pycache__/train.cpython-314.pyc\n\
+  index 8c7b6e4..7e14a53 100644\nBinary files a/src/__pycache__/train.cpython-314.pyc\
+  \ and b/src/__pycache__/train.cpython-314.pyc differ\ndiff --git a/src/evaluate.py\
+  \ b/src/evaluate.py\nindex c448ab0..954c681 100644\n--- a/src/evaluate.py\n+++ b/src/evaluate.py\n\
+  @@ -82,22 +82,22 @@ def load_checkpoint(path: str, device: torch.device):\n # ---------------------------------------------------------------------------\
+  \ #\n # Test data\n # ---------------------------------------------------------------------------\
+  \ #\n-def build_test_loader(cfg: dict, batch_size: int = 256, num_workers: int =\
+  \ 0):\n-    \"\"\"Constroi o test loader a partir da config embutida no checkpoint.\"\
+  \"\"\n-    ds_cfg = cfg[\"dataset\"]\n-    transform = transforms.Compose([\n- \
+  \       transforms.ToTensor(),\n-        transforms.Normalize(ds_cfg[\"normalize_mean\"\
+  ], ds_cfg[\"normalize_std\"]),\n-    ])\n-    test_ds = datasets.MNIST(\n-     \
+  \   cfg[\"data_path\"], train=False, download=True, transform=transform\n-    )\n\
+  -    # Se o treino usou subset, avaliamos no test set completo mesmo assim.\n- \
+  \   # (Avaliar num subset do test seria menos informativo.)\n-    return DataLoader(\n\
+  -        test_ds, batch_size=batch_size, shuffle=False,\n-        num_workers=num_workers,\
+  \ pin_memory=False,\n-    )\n+#def build_test_loader(cfg: dict, batch_size: int\
+  \ = 256, num_workers: int = 0):\n+#    \"\"\"Constroi o test loader a partir da\
+  \ config embutida no checkpoint.\"\"\"\n+#    ds_cfg = cfg[\"dataset\"]\n+#    transform\
+  \ = transforms.Compose([\n+#        transforms.ToTensor(),\n+#        transforms.Normalize(ds_cfg[\"\
+  normalize_mean\"], ds_cfg[\"normalize_std\"]),\n+#    ])\n+#    test_ds = datasets.MNIST(\n\
+  +#        cfg[\"data_path\"], train=False, download=True, transform=transform\n\
+  +#    )\n+#    # Se o treino usou subset, avaliamos no test set completo mesmo assim.\n\
+  +#    # (Avaliar num subset do test seria menos informativo.)\n+#    return DataLoader(\n\
+  +#        test_ds, batch_size=batch_size, shuffle=False,\n+#        num_workers=num_workers,\
+  \ pin_memory=False,\n+#    )\n \n \n # ---------------------------------------------------------------------------\
+  \ #\n@@ -310,7 +310,7 @@ def main():\n     print(f\"[CLI] Modelo reconstruído a\
+  \ partir da config embutida no checkpoint\")\n \n     # Dados\n-    loader = build_test_loader(cfg,\
+  \ batch_size=args.batch_size, num_workers=args.num_workers)\n+    #loader = build_test_loader(cfg,\
+  \ batch_size=args.batch_size, num_workers=args.num_workers)\n \n     # Avalia\n\
+  \     num_classes = cfg[\"model\"].get(\"num_classes\", 10)\n@@ -331,11 +331,6 @@\
+  \ def main():\n         out.write_text(json.dumps(report, indent=2))\n         print(f\"\
+  [Report] Salvo em: {out}\")\n \n-    # Matriz de confusão\n-    if args.confusion_matrix:\n\
+  -        out_img = ckpt_path.parent.parent / \"confusion_matrix.png\"\n-       \
+  \ plot_confusion_matrix(metrics, out_img, num_classes=num_classes)\n-\n \n if __name__\
+  \ == \"__main__\":\n     main()\n\\ No newline at end of file\ndiff --git a/src/train.py\
+  \ b/src/train.py\nindex 9ab6a9d..d8d2d5d 100644\n--- a/src/train.py\n+++ b/src/train.py\n\
+  @@ -27,6 +27,7 @@ import os\n import random\n import sys\n import time\n+from datetime\
+  \ import datetime\n from pathlib import Path\n \n import deepxde as dde\n@@ -265,8\
+  \ +266,10 @@ def main():\n \n     # --- Initialization Writer - Tensorboard ---\n\
+  \     if cfg[\"tensorboard\"][\"enable\"]:\n+        # Get current time to organize\
+  \ the folder's name for the tensorboard\n+        timestamp = datetime.now().strftime(\"\
+  %Y-%m-%d_%H-%M-%S\")\n         writer = SummaryWriter(\n-            \"./experiments/tensorboard/pinn\"\
+  \n+            f\"./experiments/tensorboard/pinn/{cfg[\"tensorboard\"][\"name_prefix\"\
+  ]}_{timestamp}\"\n         )\n \n     # --- Reprodutibilidade ---"
+status: "M Dockerfile.pinn\n D checkpoints/mnist_cnn.pth\n M config/default.yaml\n\
+  \ M docker-compose.yml\n M src/__pycache__/train.cpython-314.pyc\n M src/evaluate.py\n\
+  \ M src/train.py\n?? \"experiments/2026-10-09_10-57-29_pinn_local_epochs=2_model={'name':\
+  \ 'simple_pinn2', 'layers': [2, 64, 64, 64, 1], 'activation': 'tanh', 'initializer':\
+  \ 'Xavier Normal'}/graphic_validation/\"\n?? \"experiments/2026-10-09_11-01-36_pinn_local_epochs=10000_model={'name':\
+  \ 'simple_pinn2', 'layers': [2, 64, 64, 64, 1], 'activation': 'tanh', 'initializer':\
+  \ 'Xavier Normal'}/graphic_validation/\"\n?? \"experiments/2026-10-09_14-37-35_pinn_local_epochs=10_model={'name':\
+  \ 'simple_pinn2', 'layers': [2, 64, 64, 64, 1], 'activation': 'tanh', 'initializer':\
+  \ 'Xavier Normal'}/graphic_validation/\"\n?? \"experiments/2026-10-09_14-41-20_pinn_local_epochs=10000_model={'name':\
+  \ 'simple_pinn2', 'layers': [2, 64, 64, 64, 1], 'activation': 'tanh', 'initializer':\
+  \ 'Xavier Normal'}/graphic_validation/\"\n?? \"experiments/2026-10-10_06-21-04_pinn_local_epochs=2_model={'name':\
+  \ 'simple_pinn2', 'layers': [2, 64, 64, 64, 1], 'activation': 'tanh', 'initializer':\
+  \ 'Xavier Normal'}/graphic_validation/\"\n?? experiments/tensorboard/pinn/pinn_board_2026-10-13_09-33-23/\n\
+  ?? src/evaluate2.py"

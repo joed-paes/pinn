@@ -1,0 +1,13 @@
+{
+  "experiment_name": "2026-10-13_09-33-23_pinn_local_epochs=1000_model={'name': 'simple_pinn2', 'layers': [2, 64, 64, 64, 1], 'activation': 'tanh', 'initializer': 'Xavier Normal'}",
+  "config_hash": "ad73d04a9fb8",
+  "git_commit": "a5ab2bd79d091dcd4b00498d4cee19dfba9dca5e",
+  "git_dirty": true,
+  "finished_at": "2026-10-13T09:34:09.724536",
+  "status": "completed",
+  "best_loss": 0.12373510003089905,
+  "epochs": 1000,
+  "total_time_s": 45.85,
+  "n_params": 8577,
+  "device": "cpu"
+}

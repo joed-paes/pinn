@@ -27,6 +27,7 @@ import os
 import random
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 import deepxde as dde
@@ -265,8 +266,10 @@ def main():
 
     # --- Initialization Writer - Tensorboard ---
     if cfg["tensorboard"]["enable"]:
+        # Get current time to organize the folder's name for the tensorboard
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         writer = SummaryWriter(
-            "./experiments/tensorboard/pinn"
+            f"./experiments/tensorboard/pinn/{cfg["tensorboard"]["name_prefix"]}_{timestamp}"
         )
 
     # --- Reprodutibilidade ---

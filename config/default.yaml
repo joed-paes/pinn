@@ -83,3 +83,4 @@ logging:
 # --- Tensorboard ---
 tensorboard:
   enable: true
+  name_prefix: pinn_board

@@ -21,6 +21,7 @@ services:
     # Mapeia a sua pasta local atual para dentro do container (equivalente ao -v)
     volumes:
       - ./config:/workspace/config
+      - ./src:/workspace/src
       - ./datasets:/workspace/datasets
       - ./checkpoints:/workspace/checkpoints
       - ./experiments:/workspace/experiments
@@ -42,7 +43,9 @@ services:
       memlock: -1
       stack: 67108864
 
-    # Comando padrao ao iniciar (pode ser alterado para rodar um script especifico)
+    # Comando padrao ao iniciar (e.g., pode ser alterado para rodar um script especifico)
+    # >> tail -f /dev/null -- abre um arquivo nulo do sistema e fica "escutando" eternamente em background. 
+    # Consome 0% de CPU e mantém o container vivo de forma invisível.
     command: tail -f /dev/null
   
   # Servico exclusivo do Tensorboard

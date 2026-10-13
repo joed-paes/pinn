@@ -27,5 +27,5 @@ ENV DDE_BACKEND=pytorch
 # 7. Copia o restante dos seus arquivos de codigo locais para dentro do container
 COPY . .
 
-# 7. Define o comando padrao ao iniciar o container (abre o terminal interativo do Python)
-CMD ["python3"]
+# 7. Define o comando padrao ao iniciar o container
+CMD ["tail -f /dev/null"]

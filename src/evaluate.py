@@ -82,22 +82,22 @@ def load_checkpoint(path: str, device: torch.device):
 # --------------------------------------------------------------------------- #
 # Test data
 # --------------------------------------------------------------------------- #
-def build_test_loader(cfg: dict, batch_size: int = 256, num_workers: int = 0):
-    """Constroi o test loader a partir da config embutida no checkpoint."""
-    ds_cfg = cfg["dataset"]
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(ds_cfg["normalize_mean"], ds_cfg["normalize_std"]),
-    ])
-    test_ds = datasets.MNIST(
-        cfg["data_path"], train=False, download=True, transform=transform
-    )
-    # Se o treino usou subset, avaliamos no test set completo mesmo assim.
-    # (Avaliar num subset do test seria menos informativo.)
-    return DataLoader(
-        test_ds, batch_size=batch_size, shuffle=False,
-        num_workers=num_workers, pin_memory=False,
-    )
+#def build_test_loader(cfg: dict, batch_size: int = 256, num_workers: int = 0):
+#    """Constroi o test loader a partir da config embutida no checkpoint."""
+#    ds_cfg = cfg["dataset"]
+#    transform = transforms.Compose([
+#        transforms.ToTensor(),
+#        transforms.Normalize(ds_cfg["normalize_mean"], ds_cfg["normalize_std"]),
+#    ])
+#    test_ds = datasets.MNIST(
+#        cfg["data_path"], train=False, download=True, transform=transform
+#    )
+#    # Se o treino usou subset, avaliamos no test set completo mesmo assim.
+#    # (Avaliar num subset do test seria menos informativo.)
+#    return DataLoader(
+#        test_ds, batch_size=batch_size, shuffle=False,
+#        num_workers=num_workers, pin_memory=False,
+#    )
 
 
 # --------------------------------------------------------------------------- #
@@ -310,7 +310,7 @@ def main():
     print(f"[CLI] Modelo reconstruído a partir da config embutida no checkpoint")
 
     # Dados
-    loader = build_test_loader(cfg, batch_size=args.batch_size, num_workers=args.num_workers)
+    #loader = build_test_loader(cfg, batch_size=args.batch_size, num_workers=args.num_workers)
 
     # Avalia
     num_classes = cfg["model"].get("num_classes", 10)
@@ -330,11 +330,6 @@ def main():
         out = ckpt_path.parent.parent / "eval_report.json"
         out.write_text(json.dumps(report, indent=2))
         print(f"[Report] Salvo em: {out}")
-
-    # Matriz de confusão
-    if args.confusion_matrix:
-        out_img = ckpt_path.parent.parent / "confusion_matrix.png"
-        plot_confusion_matrix(metrics, out_img, num_classes=num_classes)
 
 
 if __name__ == "__main__":
