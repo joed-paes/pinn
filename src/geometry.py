@@ -13,8 +13,8 @@ class SpatialTemporalDomain:
         self.x_min, self.x_max = geom_cfg["x_min"], geom_cfg["x_max"] 
         self.t_min, self.t_max = geom_cfg["t_min"], geom_cfg["t_max"]
         
-        # Tipo de amostragem vindo da configuração (ex: 'uniform', 'latin_hypercube', 'caustic_geometric')
-        self.sampling_method = geom_cfg.get("sampling_method", "uniform")
+        # Tipo de amostragem vindo da configuração (ex: 'uniform', 'latin_hypercube', 'jacobian')
+        self.sampling_method = cfg.get("sampling").get("sampling_method", "uniform")
 
     def sample_collocation(self, num_points):
         """Amostra pontos da fisica (PDE) baseado no metodo escolhido."""

@@ -47,7 +47,6 @@ pde:
 # Geometry and collocation point sampling
 geometry:
   name: interval_1d_time
-  sampling_method: latin_hypercube # latin_hypercube, uniform
   x_min: -3.0
   x_max: 3.0
   t_min: 0.0
@@ -59,17 +58,20 @@ sampling:
   num_initial: 100
   num_test: 500
   resample_every: null  # null = sem resample; int = resample at N epochs
-  geometric: false
+  sampling_method: latin_hypercube # latin_hypercube, uniform, jacobian
 
 # --- Training ---
 epochs: 10000
 log_interval: 1000            # batches entre logs
 
-# --- Validation ---
+# --- Validation/Evaluation ---
 val_every_epoch: true
 save_best: true
 save_last: true
 save_every_epoch: false
+num_spatial_points: 200
+num_time_points: 100
+
 
 # --- Experiments ---
 experiment:

@@ -1,0 +1,23 @@
+# Python / Cache
+__pycache__/
+*.pyc
+
+# Virtual environments
+.env
+.venv/
+venv/
+
+# Jupyter Notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Data and weighted outputs
+data/
+experiments/
+*.log
+
+# Deep Learning Models Weights (Pytorch/HuggingFace)
+*.pt
+*.pth
+*.ckpt
+*.safetensors

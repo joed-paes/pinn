@@ -1,22 +1,30 @@
-# src/evaluate.py
 """
 Checkpoint evaluation salved by Experiment.
 
 Uso:
-    # Avaliar o melhor checkpoint de um experimento específico
-    python src/evaluate.py --checkpoint experiments/2026-.../checkpoints/best.pth
+    # Avaliar os experimentos de uma pasta específica
+    python src/evaluate.py --experiments-dir experiments/
+
+    # Avaliar um experimento específico que não foi avaliado
+    python src/evaluate.py --experiment experiments/2026-.../checkpoints/best.pth
+
+    # Avaliar todos os experimentos que ainda não foram avaliados 
+    python src/evaluate.py --experiment experiments/2026-.../checkpoints/best.pth
+
+    #  Ignora se já existe avaliação e refaz toda a análise
+    python src/evaluate.py --ignore --all
 
     # Avaliar usando GPU
-    python src/evaluate.py --checkpoint ... --device cuda
+    python src/evaluate.py ... --device cuda
 
-    # Avaliar o experimento mais recente automaticamente
+    # Avaliar o experimento mais recente automaticamente de uma pasta específica
     python src/evaluate.py --latest --experiments-dir experiments/
 
     # Salvar relatório JSON na pasta do experimento
-    python src/evaluate.py --checkpoint ... --save-report
+    python src/evaluate.py --experiment ... --save-report
 
-    # Gerar matriz de confusão (requer matplotlib + seaborn)
-    python src/evaluate.py --checkpoint ... --confusion-matrix
+    # Avaliar o melhor .pth do último experimento, ignora se já existe avaliação e salva o report
+    python src/evaluate.py --best --latest --ignore --save-report
 
     Codigo simples para checar um checkpoint:
     
@@ -28,27 +36,128 @@ Uso:
 
 """
 
+import os
+import glob
+import yaml
 import argparse
 import json
 import sys
+import re
 from collections import Counter
 from pathlib import Path
 
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, Subset
-from torchvision import datasets, transforms
+import matplotlib
+# Configura o matplotlib para rodar em modo "headless" (servidor Linux via SSH)
+matplotlib.use('Agg') 
+import matplotlib.pyplot as plt
 
 # Importa do pacote src
 try:
     from src.train import build_criterion
     from src.model import build_model
+    from src.pdes import build_pde
 except ImportError:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from train import build_criterion
     from model import build_model
+    from pdes import build_pde
 
+
+# --------------------------------------------------------------------------- #
+# Valid Checkpoint search
+# --------------------------------------------------------------------------- #
+def search_checkpoints(experiments_dir: Path, args: argparse.Namespace):
+    valid_experiments = []
+    
+    if args.best:
+        search_pattern = "best.pth"
+    else:
+        search_pattern = "*.pth"
+    
+    # Verification 1 - run last experiment
+    if args.latest:
+        experiment_folder = find_latest_checkpoint(experiments_dir)
+        checkpoint_folder = experiment_folder / "checkpoints"
+        validation_folder = experiment_folder / "graphic_validation"
+        if validation_folder.exists() and validation_folder.is_dir() and not args.ignore:
+            print(f"Validation folder already exists.")
+            return []
+        else:
+            pth_files = list(checkpoint_folder.glob(search_pattern)) # just looking for best case ("*.pth" looks for all)
+            if pth_files:
+                valid_experiments.append({
+                    "experiment_folder": experiment_folder,
+                    "experiment": experiment_folder.name,
+                    "checkpoint_path": checkpoint_folder,
+                    "num_pth": len(pth_files),
+                    "files": [str(checkpoint_folder / f.name) for f in pth_files]
+                })
+            return valid_experiments
+    
+    # Verification 2 - run specific experiment
+    if args.experiment:
+        experiment_folder = Path(args.experiment)
+        checkpoint_folder = experiment_folder / "checkpoints"
+        validation_folder = experiment_folder / "graphic_validation"
+        if validation_folder.exists() and validation_folder.is_dir() and not args.ignore:
+            print(f"Validation folder already exists.")
+            return []
+        else:
+            pth_files = list(checkpoint_folder.glob(search_pattern)) # just looking for best case ("*.pth" looks for all)
+            if pth_files:
+                valid_experiments.append({
+                    "experiment_folder": experiment_folder,
+                    "experiment": experiment_folder.name,
+                    "checkpoint_path": checkpoint_folder,
+                    "num_pth": len(pth_files),
+                    "files": [str(checkpoint_folder / f.name) for f in pth_files]
+                })
+            return valid_experiments
+
+    # Verification 2 - run for all folders (if not validation already created)
+    if args.all:
+        # --- Loop for all checkpoints ---
+        for checkpoint_folder in experiments_dir.glob("*/checkpoints"):
+            experiment_folder = checkpoint_folder.parent
+
+            # Filter only the valid experiments folder (starts with "2026..."")
+            if re.match(r"^\d{4}", experiment_folder.name):
+                
+                validation_folder = experiment_folder / "graphic_validation"
+                if validation_folder.exists() and validation_folder.is_dir() and not args.ignore:
+                    continue # skip this experiment and moves next
+                else:
+                    pth_files = list(checkpoint_folder.glob(search_pattern))
+                    if pth_files:
+                        valid_experiments.append({
+                            "experiment_folder": experiment_folder,
+                            "experiment": experiment_folder.name,
+                            "checkpoint_path": checkpoint_folder,
+                            "num_pth": len(pth_files),
+                            "files": [str(checkpoint_folder / f.name) for f in pth_files]
+                        })
+    
+        print(f"\nFound {len(valid_experiments)} experiments with checkpoints to be evaluated.\n")
+        return valid_experiments
+
+    raise RuntimeError("Provide --all, --latest or --experiment arguments")
+
+# --------------------------------------------------------------------------- #
+# Get latest Checkpoint
+# --------------------------------------------------------------------------- #
+def find_latest_checkpoint(experiments_dir: Path) -> Path:
+    """Encontra o best.pth do experimento mais recente."""
+    runs = sorted(experiments_dir.glob("*/metadata.json"))
+    if not runs:
+        raise FileNotFoundError(f"Nenhum experimento encontrado em {experiments_dir}")
+    latest = runs[-1].parent
+    pths = list((latest / "checkpoints").glob("*.pth"))
+    if not pths:
+        raise FileNotFoundError(f"Nenhum checkpoint em {latest}")
+    return latest
 
 # --------------------------------------------------------------------------- #
 # Checkpoint load
@@ -72,109 +181,96 @@ def load_checkpoint(path: str, device: torch.device):
         "git_commit": ckpt.get("git_commit"),
         "git_dirty": ckpt.get("git_dirty"),
         "saved_at": ckpt.get("saved_at"),
+        "name": os.path.basename(path),
         "epoch": ckpt.get("epoch"),
-        "val_acc": ckpt.get("val_acc"),
+        "loss": ckpt.get("loss"),
         "is_best": ckpt.get("is_best", False),
     }
     return model, cfg, meta
 
-
 # --------------------------------------------------------------------------- #
-# Test data
+# Run checkpoint
 # --------------------------------------------------------------------------- #
-#def build_test_loader(cfg: dict, batch_size: int = 256, num_workers: int = 0):
-#    """Constroi o test loader a partir da config embutida no checkpoint."""
-#    ds_cfg = cfg["dataset"]
-#    transform = transforms.Compose([
-#        transforms.ToTensor(),
-#        transforms.Normalize(ds_cfg["normalize_mean"], ds_cfg["normalize_std"]),
-#    ])
-#    test_ds = datasets.MNIST(
-#        cfg["data_path"], train=False, download=True, transform=transform
-#    )
-#    # Se o treino usou subset, avaliamos no test set completo mesmo assim.
-#    # (Avaliar num subset do test seria menos informativo.)
-#    return DataLoader(
-#        test_ds, batch_size=batch_size, shuffle=False,
-#        num_workers=num_workers, pin_memory=False,
-#    )
+def run_checkpoint(model, cfg, meta, OUTPUT_IMG_DIR):
+    # --- Load geomentry ---
+    x_min = cfg.get("geometry", {}).get('x_min', -1.0)
+    x_max = cfg.get("geometry", {}).get('x_max', 1.0)
+    t_min = cfg.get("geometry", {}).get('t_min', 0.0)
+    t_max = cfg.get("geometry", {}).get('t_max', 1.0)
+    # --- PDE ---
+    nu = cfg.get("pde", {}).get("params", {}).get('nu', 0.01 / np.pi)
+    pde_fn, _, _ = build_pde(cfg)
 
+    print(f"-> Configurações carregadas do experimento: {meta["name"]}")
+    print(f"-> Domínio Espacial: [{x_min}, {x_max}] | Domínio Temporal: [{t_min}, {t_max}]")
 
-# --------------------------------------------------------------------------- #
-# Evaluation
-# --------------------------------------------------------------------------- #
-@torch.no_grad()
-def evaluate_full(model, loader, device, num_classes: int = 10):
-    """Retorna metricas: loss, acc, per-class acc, confusion matrix, top-k."""
-    criterion = build_criterion()
-    model.eval()
+    # --- Device ---
+    device = cfg.get("device")
 
-    all_preds = []
-    all_targets = []
-    all_probs = []
-    total_loss = 0.0
-    total = 0
+    # --- PREPARAÇÃO DA MALHA DE TESTE FINA (Sem necessidade de técnica de amostragem) ---
+    # Resolução alta (ex: 200x100) para garantir uma avaliação rigorosa da física
+    n_x = cfg.get("num_spatial_points", 200)
+    n_t = cfg.get("num_time_points", 100)
+    x_space = np.linspace(x_min, x_max, n_x)
+    t_space = np.linspace(t_min, t_max, n_t)
+    X, T = np.meshgrid(x_space, t_space)
 
-    for data, target in loader:
-        data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
-        output = model(data)
-        loss = criterion(output, target)
+    x_tensor = torch.tensor(X.flatten()[:, None], dtype=torch.float32, requires_grad=True).to(device)
+    t_tensor = torch.tensor(T.flatten()[:, None], dtype=torch.float32, requires_grad=True).to(device)
 
-        total_loss += loss.item() * data.size(0)
-        total += data.size(0)
+    # Inferência da solução aproximada u(x, t)
+    u_pred_tensor = model(x_tensor, t_tensor)
+    
+    # Executa a função de cálculo de resíduo importada do seu src/pde.py
+    # Adapte os argumentos abaixo de acordo com a assinatura exata da sua função calcular_residuo
+    f_residuo_tensor = pde_fn((x_tensor, t_tensor), u_pred_tensor)
+    
+    # Conversão para NumPy para métricas e plotagem
+    u_pred = u_pred_tensor.detach().cpu().numpy().reshape(X.shape)
+    f_residuo = f_residuo_tensor.detach().cpu().numpy().reshape(X.shape)
+    
+    mse_physics = np.mean(f_residuo ** 2)
+    max_residuo = np.max(np.abs(f_residuo))
 
-        probs = torch.softmax(output, dim=1)
-        all_probs.append(probs.cpu())
-        all_preds.append(output.argmax(1).cpu())
-        all_targets.append(target.cpu())
-
-    preds = torch.cat(all_preds).numpy()
-    targets = torch.cat(all_targets).numpy()
-    probs = torch.cat(all_probs).numpy()
-
-    acc = (preds == targets).mean()
-    avg_loss = total_loss / total
-
-    # Per-class accuracy
-    per_class_acc = {}
-    for c in range(num_classes):
-        mask = targets == c
-        if mask.sum() > 0:
-            per_class_acc[c] = float((preds[mask] == c).mean())
-
-    # Matriz de confusão (sem sklearn)
-    cm = np.zeros((num_classes, num_classes), dtype=int)
-    for t, p in zip(targets, preds):
-        cm[t, p] += 1
-
-    # Top-5 accuracy
-    top5 = np.argsort(-probs, axis=1)[:, :5]
-    top5_acc = float(np.mean([t in row for t, row in zip(targets, top5)]))
-
-    # Confiança média nas predições corretas vs incorretas
-    conf_correct = float(probs[np.arange(len(preds)), preds][preds == targets].mean()) \
-        if (preds == targets).any() else 0.0
-    conf_wrong = float(probs[np.arange(len(preds)), preds][preds != targets].mean()) \
-        if (preds != targets).any() else 0.0
+    fig, ax = plt.subplots(1, 2, figsize=(14, 5))
+    
+    # Plot u(x,t)
+    im1 = ax[0].imshow(u_pred, interpolation='nearest', cmap='rainbow', 
+                    extent=[t_space.min(), t_space.max(), x_space.min(), x_space.max()], 
+                    origin='lower', aspect='auto')
+    ax[0].set_title(f'Prediction $u(x,t)$\n{meta["name"]}')
+    ax[0].set_xlabel('Time ($t$)')
+    ax[0].set_ylabel('Space ($x$)')
+    fig.colorbar(im1, ax=ax[0])
+    
+    # Plot do Resíduo Físico absoluto da EDP
+    im2 = ax[1].imshow(np.abs(f_residuo), interpolation='nearest', cmap='viridis', 
+                    extent=[t_space.min(), t_space.max(), x_space.min(), x_space.max()], 
+                    origin='lower', aspect='auto')
+    ax[1].set_title(f'PDE Physical Residual  $|f(x,t)|$\nMSE: {mse_physics:.2e}')
+    ax[1].set_xlabel('Time ($t$)')
+    ax[1].set_ylabel('Space ($x$)')
+    fig.colorbar(im2, ax=ax[1])
+    
+    plt.tight_layout()
+    
+    # Salva o arquivo diretamente na pasta do experimento correspondente
+    img_output_path = os.path.join(OUTPUT_IMG_DIR, f"{os.path.splitext(os.path.basename(meta["name"]))[0]}.png")
+    plt.savefig(img_output_path, dpi=150)
+    plt.close(fig)
 
     return {
-        "loss": float(avg_loss),
-        "accuracy": float(acc),
-        "top5_accuracy": top5_acc,
-        "per_class_accuracy": per_class_acc,
-        "confusion_matrix": cm.tolist(),
-        "mean_confidence_correct": conf_correct,
-        "mean_confidence_wrong": conf_wrong,
-        "n_samples": int(total),
+        "num_spatial_points": n_x,
+        "num_time_points": n_t,
+        "mse_physics": mse_physics, 
+        "max_residul": max_residuo
     }
-
-
 # --------------------------------------------------------------------------- #
 # Utilitarios de visualizacao
 # --------------------------------------------------------------------------- #
-def print_report(meta: dict, metrics: dict, num_classes: int = 10):
+def print_report(meta: dict, metrics: dict, idx: int):
     print("\n" + "=" * 60)
-    print("RELATÓRIO DE AVALIAÇÃO")
+    print(f"Evaluation report - {idx+1}")
     print("=" * 60)
 
     print("\n--- Checkpoint ---")
@@ -184,153 +280,96 @@ def print_report(meta: dict, metrics: dict, num_classes: int = 10):
     print(f"  saved_at    : {meta.get('saved_at')}")
     print(f"  epoch       : {meta.get('epoch')}")
     print(f"  is_best     : {meta.get('is_best')}")
+    print(f"  loss        : {meta.get('loss')}")
 
     print("\n--- Métricas globais ---")
-    print(f"  amostras          : {metrics['n_samples']}")
-    print(f"  loss              : {metrics['loss']:.4f}")
-    print(f"  accuracy          : {metrics['accuracy']:.4f}")
-    print(f"  top-5 accuracy    : {metrics['top5_accuracy']:.4f}")
-    print(f"  conf. média (acertos) : {metrics['mean_confidence_correct']:.4f}")
-    print(f"  conf. média (erros)   : {metrics['mean_confidence_wrong']:.4f}")
-
-    print("\n--- Acurácia por classe ---")
-    for c in range(num_classes):
-        if c in metrics["per_class_accuracy"]:
-            acc = metrics["per_class_accuracy"][c]
-            bar = "█" * int(acc * 30)
-            print(f"  dígito {c}: {acc:.4f} {bar}")
-
-    print("\n--- Matriz de confusão ---")
-    cm = np.array(metrics["confusion_matrix"])
-    header = "     " + " ".join(f"{i:5d}" for i in range(num_classes))
-    print(header)
-    for i in range(num_classes):
-        row = " ".join(f"{v:5d}" for v in cm[i])
-        print(f"  {i}: {row}")
-
-    # Classes mais confundidas
-    print("\n--- Top-5 confusões ---")
-    confusions = []
-    for i in range(num_classes):
-        for j in range(num_classes):
-            if i != j and cm[i, j] > 0:
-                confusions.append((cm[i, j], i, j))
-    confusions.sort(reverse=True)
-    for count, true_c, pred_c in confusions[:5]:
-        print(f"  {count:4d}× verdadeiro={true_c}, predito={pred_c}")
+    print(f"  Evaluating points : {metrics['num_spatial_points']*metrics['num_time_points']}")
+    print(f"  MSE (Physics)     : {metrics['mse_physics']:.4f}")
+    print(f"  Max. residual     : {metrics['max_residul']:.4f}")
 
     print("=" * 60 + "\n")
 
-
-def plot_confusion_matrix(metrics: dict, out_path: Path, num_classes: int = 10):
-    """Gera e salva matriz de confusão como imagem."""
-    try:
-        import matplotlib.pyplot as plt
-        import seaborn as sns
-    except ImportError:
-        print("[WARN] matplotlib/seaborn não instalados. Pulando plot.")
-        return
-
-    cm = np.array(metrics["confusion_matrix"])
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
-                xticklabels=range(num_classes), yticklabels=range(num_classes))
-    plt.xlabel("Predito")
-    plt.ylabel("Verdadeiro")
-    plt.title(f"Matriz de Confusão — acc={metrics['accuracy']:.4f}")
-    plt.tight_layout()
-    plt.savefig(out_path, dpi=100)
-    plt.close()
-    print(f"[Plot] Matriz salva em: {out_path}")
-
-
 # --------------------------------------------------------------------------- #
-# CLI
+# Decoder for JSON format
 # --------------------------------------------------------------------------- #
-def find_latest_checkpoint(experiments_dir: Path) -> Path:
-    """Encontra o best.pth do experimento mais recente."""
-    runs = sorted(experiments_dir.glob("*/metadata.json"))
-    if not runs:
-        raise FileNotFoundError(f"Nenhum experimento encontrado em {experiments_dir}")
-    latest = runs[-1].parent
-    # Prioriza best.pth, senão last.pth, senão o primeiro .pth
-    for name in ["best.pth", "last.pth"]:
-        p = latest / "checkpoints" / name
-        if p.exists():
-            return p
-    pths = sorted((latest / "checkpoints").glob("*.pth"))
-    if not pths:
-        raise FileNotFoundError(f"Nenhum checkpoint em {latest}")
-    return pths[0]
+def json_encoder(obj):
+    if isinstance(obj, (np.float32, np.float64)):
+        return float(obj)
+    if isinstance(obj, (np.int32, np.int64)):
+        return int(obj)
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, Path):
+        return str(obj)
+    return str(obj) # Fallback para qualquer outro tipo não suportado
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Avalia um checkpoint salvo pelo Experiment")
-    parser.add_argument("--checkpoint", type=str, default=None,
-                        help="Caminho do arquivo .pth")
+    parser = argparse.ArgumentParser(description="Checkpoint evaluation salved by Experiment")
+    parser.add_argument("--experiment", type=str, default=None,
+                        help="Path to specific experiment")
+    parser.add_argument("--all", action="store_true",
+                        help="Look for all *.pth available from experiments without evaluation")
+    parser.add_argument("--ignore", action="store_true",
+                        help="Run for all *.pth available, ignoring if evaluation exists")
     parser.add_argument("--latest", action="store_true",
-                        help="Usa o best.pth do experimento mais recente")
+                        help="Run last *.pth generated")
+    parser.add_argument("--best", action="store_true",
+                        help="Run only best.pth generated")
     parser.add_argument("--experiments-dir", type=str, default="experiments",
-                        help="Diretório base dos experimentos (para --latest)")
+                        help="Experiment base path")
     parser.add_argument("--device", type=str, default="cpu",
                         choices=["cpu", "cuda"],
                         help="Device de avaliação")
-    parser.add_argument("--batch-size", type=int, default=256)
-    parser.add_argument("--num-workers", type=int, default=0)
     parser.add_argument("--save-report", action="store_true",
-                        help="Salva eval_report.json na pasta do experimento")
-    parser.add_argument("--confusion-matrix", action="store_true",
-                        help="Gera imagem da matriz de confusão")
-    parser.add_argument("--show-errors", type=int, default=0,
-                        help="Mostra N exemplos classificados incorretamente")
+                        help="Salve eval_report.json in experiment folder")
+       
     args = parser.parse_args()
 
-    # Resolve o caminho do checkpoint
-    if args.latest:
-        ckpt_path = find_latest_checkpoint(Path(args.experiments_dir))
-        print(f"[CLI] Usando checkpoint mais recente: {ckpt_path}")
-    elif args.checkpoint:
-        ckpt_path = Path(args.checkpoint)
+    # Look for checkpoints in experiments
+    ckpt_list = search_checkpoints(Path(args.experiments_dir), args)
+
+    if not ckpt_list:
+        print("All experiments already have validation results.")
+        sys.exit(1)
     else:
-        parser.error("Forneça --checkpoint <path> ou --latest")
+        print(f"[CLI] Selected checkpoints: {len(ckpt_list)}")
 
-    if not ckpt_path.exists():
-        raise FileNotFoundError(f"Checkpoint não encontrado: {ckpt_path}")
-
-    # Device
+    # --- Device ---
     if args.device == "cuda" and not torch.cuda.is_available():
-        print("[WARN] CUDA indisponível, caindo para CPU.")
+        print("[WARN] CUDA unavailable, moving to CPU.")
         device = torch.device("cpu")
     else:
         device = torch.device(args.device)
     print(f"[CLI] Device: {device}")
 
-    # Carrega
-    model, cfg, meta = load_checkpoint(str(ckpt_path), device)
-    print(f"[CLI] Modelo reconstruído a partir da config embutida no checkpoint")
+    
+    for ckpt in ckpt_list:
+        report = []
+        for i, ckpt_file in enumerate(ckpt["files"]):
+            # --- Output for image storage ---
+            OUTPUT_IMG_DIR = ckpt["experiment_folder"] / "graphic_validation"
+            os.makedirs(OUTPUT_IMG_DIR, exist_ok=True)      
 
-    # Dados
-    #loader = build_test_loader(cfg, batch_size=args.batch_size, num_workers=args.num_workers)
+            # --- Load Checkpoint ---
+            model, cfg, meta = load_checkpoint(ckpt_file, device)
+            # --- Run Checkpoint ---
+            metrics = run_checkpoint(model, cfg, meta, OUTPUT_IMG_DIR)
+        
+            # Report
+            print_report(meta, metrics, i)
+            report.append({
+                "checkpoint_path": str(ckpt["checkpoint_path"]),
+                "checkpoint_meta": meta,
+                "metrics": metrics,
+            })
 
-    # Avalia
-    num_classes = cfg["model"].get("num_classes", 10)
-    metrics = evaluate_full(model, loader, device, num_classes=num_classes)
-
-    # Report
-    print_report(meta, metrics, num_classes=num_classes)
-
-    # Salva relatório
-    if args.save_report:
-        report = {
-            "checkpoint_path": str(ckpt_path),
-            "checkpoint_meta": meta,
-            "config_hash": meta.get("config_hash"),
-            "metrics": metrics,
-        }
-        out = ckpt_path.parent.parent / "eval_report.json"
-        out.write_text(json.dumps(report, indent=2))
-        print(f"[Report] Salvo em: {out}")
-
+        # Salva relatório
+        if args.save_report:
+            out = ckpt["checkpoint_path"].parent / "eval_report.json"
+            out.write_text(json.dumps(report, indent=2, default=json_encoder))
+            print(f"[Report] Salvo em: {out}")
+            
 
 if __name__ == "__main__":
     main()
