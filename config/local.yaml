@@ -16,7 +16,7 @@ epochs: 2
 # --- Sampling Information ---
 sampling:
   num_domain: 200
-  num_boundary: 20
+  num_boundary: 20  # represent 20 points for each side of boundary (bc_left=20 and bc_right=20, total=40)
   num_initial: 20
   num_test: 100
 

@@ -35,27 +35,30 @@ loss:
 
 loss_weights:
   pde: 1.0
-  ic: 1.0
-  bc: 1.0
+  ic: 10.0
+  bc: 10.0
 
+# PDE parameters, domains and boundary 
 pde:
   name: burger
   params:
     nu: 0.01
     n_x: 1
-
-# Geometry and collocation point sampling
-geometry:
-  name: interval_1d_time
-  x_min: -3.0
-  x_max: 3.0
-  t_min: 0.0
-  t_max: 1.0
-
+    domain:
+      x_min: -1.0
+      x_max: 1.0
+      t_min: 0.0
+      t_max: 1.0
+    ic_type: sin
+    boundary:
+      u_left: 0
+      u_right: 0
+  
+# --- Sampling Information ---
 sampling:
-  num_domain: 2000
-  num_boundary: 100
-  num_initial: 100
+  num_domain: 10000
+  num_boundary: 1000
+  num_initial: 2000
   num_test: 500
   resample_every: null  # null = sem resample; int = resample at N epochs
   sampling_method: latin_hypercube # latin_hypercube, uniform, jacobian

@@ -176,7 +176,7 @@ def build_scheduler(optimizer, cfg: dict):
 # --------------------------------------------------------------------------- #
 # Loop de treino / validacao
 # --------------------------------------------------------------------------- #
-def train_one_epoch(pde_fn, ic_true_fn, bc_true_fn, params, model, sampling, optimizer, criterion, loss_weights ,device, log_interval):
+def train_one_epoch(pde_fn, ic_true_fn, bc_true_fn, params, model, sampling, optimizer, criterion, loss_weights, device, log_interval):
     model.train()
 
     # If I would use batch within a dataloader, I could add a for loop here to evaluate the model in this batch
@@ -184,10 +184,11 @@ def train_one_epoch(pde_fn, ic_true_fn, bc_true_fn, params, model, sampling, opt
     # data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
 
     # Coordinates
-    # Defino o tipo de sampling no arquivo de configuracao
-    x, t = sampling.sample_collocation(num_points = 10000) # 10000 pontos
-    x_ic, t_ic = sampling.sample_initial(num_points = 10000)
-    x_bc, t_bc = sampling.sample_boundary(num_points = 10000)
+    # Definir tipo de sampling no arquivo de configuracao
+    # Definir quantidade de pontos no arquivo de configuracao
+    x, t = sampling.sample_collocation()
+    x_ic, t_ic = sampling.sample_initial()
+    x_bc, t_bc = sampling.sample_boundary()
 
     # PINN values
     u = model(x,t)
@@ -195,13 +196,13 @@ def train_one_epoch(pde_fn, ic_true_fn, bc_true_fn, params, model, sampling, opt
     u_bc = model(x_bc,x_bc)
 
     # True values
-    residual = pde_fn((x, t), u)
-    u_ic_true = ic_true_fn(x_ic) 
-    u_bc_true = bc_true_fn(x_bc, t_bc)
+    residual = pde_fn((x, t), u).to(device)
+    u_ic_true = ic_true_fn(x_ic).to(device)
+    u_bc_true = bc_true_fn(x_bc, t_bc).to(device)
     
     optimizer.zero_grad(set_to_none=True)
     
-    loss_pde = criterion(residual, torch.zeros_like(residual))
+    loss_pde = criterion(residual, torch.zeros_like(residual).to(device))
     loss_ic = criterion(u_ic, u_ic_true)
     loss_bc = criterion(u_bc, u_bc_true)
 
@@ -253,6 +254,8 @@ def main():
                         help="Sobrescreve experiment.name_prefix")
     parser.add_argument("--epochs", type=int, default=None,
                         help="Sobrescreve epochs do config")
+    parser.add_argument("--no-tensorboard", action="store_true",
+                        help="Envio de dados para o tensorboard")
     parser.add_argument("--dry-run", action="store_true",
                         help="So valida config e constroi modelo, sem treinar")
     args = parser.parse_args()
@@ -265,11 +268,11 @@ def main():
         cfg["epochs"] = args.epochs
 
     # --- Initialization Writer - Tensorboard ---
-    if cfg["tensorboard"]["enable"]:
+    if cfg["tensorboard"]["enable"] and not args.no_tensorboard:
         # Get current time to organize the folder's name for the tensorboard
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         writer = SummaryWriter(
-            f"./experiments/tensorboard/pinn/{cfg["tensorboard"]["name_prefix"]}_{timestamp}"
+            f"./experiments/tensorboard/pinn/{cfg["tensorboard"]["name_prefix"]}_{cfg["pde"]["name"]}_{timestamp}"
         )
 
     # --- Reprodutibilidade ---
@@ -280,6 +283,7 @@ def main():
     if device.type == "cuda" and not torch.cuda.is_available():
         print("[WARN] CUDA solicitado mas indisponivel. Caindo para CPU.")
         device = torch.device("cpu")
+        cfg["device"] = "cpu"
     print(f"[Setup] Device: {device} | Epochs: {cfg['epochs']} | "
           f"LR: {cfg['optimizer']['learning_rate']}")
 
@@ -306,7 +310,7 @@ def main():
             print("[Experiment] ⚠️  Working tree sujo — reprodução exata requer o diff salvo em git_info.yaml")
 
         # --- Dados ---
-        # Not required for PINNs. Check for specific cases
+        # Not required for PINNs. Maybe, should be checked for specific cases
         #train_loader, test_loader = build_dataloaders(cfg)
 
         # --- PDE ---
@@ -316,9 +320,9 @@ def main():
         data_sampling = SpatialTemporalDomain(cfg) 
 
         # --- Model ---
-        model = build_model(cfg).to(device)
+        model = build_model(cfg)
         n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-        print(f"[Model] {cfg['model']['name']} | params treináveis: {n_params:,}")
+        print(f"[Model] {cfg['model']['name']} | trainable params: {n_params:,}")
 
         if args.dry_run:
             print("[Dry-run] Config e modelo OK. Encerrando sem treinar.")
@@ -364,7 +368,7 @@ def main():
             })
 
             # --- Collect Writer - Tensorboard ---
-            if cfg["tensorboard"]["enable"]:
+            if cfg["tensorboard"]["enable"] and not args.no_tensorboard:
                 # Writer (to be used in Tensorboard)
                 writer.add_scalar("Loss/Total", loss, epoch)
                 writer.add_scalar("Loss/PDE", pde_loss, epoch)
@@ -406,7 +410,7 @@ def main():
         print(f"\n[Treino] Concluido em {total_time:.1f}s | best_loss={best_loss:.4f}")
 
         # --- Close Writer - Tensorboard ---
-        if cfg["tensorboard"]["enable"]:
+        if cfg["tensorboard"]["enable"] and not args.no_tensorboard:
             writer.close()  
 
         exp.finalize(

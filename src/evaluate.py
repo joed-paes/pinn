@@ -193,10 +193,10 @@ def load_checkpoint(path: str, device: torch.device):
 # --------------------------------------------------------------------------- #
 def run_checkpoint(model, cfg, meta, OUTPUT_IMG_DIR):
     # --- Load geomentry ---
-    x_min = cfg.get("geometry", {}).get('x_min', -1.0)
-    x_max = cfg.get("geometry", {}).get('x_max', 1.0)
-    t_min = cfg.get("geometry", {}).get('t_min', 0.0)
-    t_max = cfg.get("geometry", {}).get('t_max', 1.0)
+    x_min = cfg.get("pde", {}).get("params", {}).get("domain", {}).get('x_min', -1.0)
+    x_max = cfg.get("pde", {}).get("params", {}).get("domain", {}).get('x_max', 1.0)
+    t_min = cfg.get("pde", {}).get("params", {}).get("domain", {}).get('t_min', 0.0)
+    t_max = cfg.get("pde", {}).get("params", {}).get("domain", {}).get('t_max', 1.0)
     # --- PDE ---
     nu = cfg.get("pde", {}).get("params", {}).get('nu', 0.01 / np.pi)
     pde_fn, _, _ = build_pde(cfg)

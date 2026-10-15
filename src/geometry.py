@@ -9,15 +9,17 @@ class SpatialTemporalDomain:
         Gerencia o domínio espaço-temporal e a amostragem de pontos.
         """
         self.device = cfg["device"]
-        geom_cfg = cfg["geometry"]
+        geom_cfg = cfg["pde"]["params"]["domain"]
+        self.sampling = cfg["sampling"]
         self.x_min, self.x_max = geom_cfg["x_min"], geom_cfg["x_max"] 
         self.t_min, self.t_max = geom_cfg["t_min"], geom_cfg["t_max"]
         
         # Tipo de amostragem vindo da configuração (ex: 'uniform', 'latin_hypercube', 'jacobian')
         self.sampling_method = cfg.get("sampling").get("sampling_method", "uniform")
 
-    def sample_collocation(self, num_points):
+    def sample_collocation(self):
         """Amostra pontos da fisica (PDE) baseado no metodo escolhido."""
+        num_points = self.sampling["num_domain"]
         if self.sampling_method == "uniform":
             # Distribuicao uniforme aleatoria padrao
             x = (self.x_max - self.x_min) * torch.rand((num_points, 1)) + self.x_min
@@ -53,26 +55,27 @@ class SpatialTemporalDomain:
             t = (self.t_max - self.t_min) * torch.rand((num_points, 1)) + self.t_min
 
         else:
-            raise ValueError(f"Método de amostragem desconhecido: {self.sampling_method}")
+            raise ValueError(f"Unknown sampling method: {self.sampling_method}")
 
         # Ativa o rastreamento de gradientes para o calculo do Autograd
         x.requires_grad_(True)
         t.requires_grad_(True)
         return x.to(self.device), t.to(self.device)
 
-    def sample_initial(self, num_points):
+    def sample_initial(self):
         """Amostra pontos na linha temporal inicial (t = 0)."""
+        num_points = self.sampling["num_initial"]
         # Geralmente mantido como uniforme ou linearmente espaçado para a condição inicial
         x = (self.x_max - self.x_min) * torch.rand((num_points, 1)) + self.x_min
         t = torch.zeros((num_points, 1)) + self.t_min
         return x.to(self.device), t.to(self.device)
 
-    def sample_boundary(self, num_points):
+    def sample_boundary(self):
         """Amostra pontos nas bordas espaciais (x = x_min e x = x_max)."""
-        num_half = num_points // 2
-        x_left = torch.full((num_half, 1), self.x_min)
-        x_right = torch.full((num_points - num_half, 1), self.x_max)
+        num_points = self.sampling["num_boundary"]
+        x_left = torch.full((num_points, 1), self.x_min)
+        x_right = torch.full((num_points, 1), self.x_max)
         x = torch.cat([x_left, x_right], dim=0)
         
-        t = (self.t_max - self.t_min) * torch.rand((num_points, 1)) + self.t_min
+        t = (self.t_max - self.t_min) * torch.rand((2*num_points, 1)) + self.t_min
         return x.to(self.device), t.to(self.device)

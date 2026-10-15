@@ -83,6 +83,7 @@ class SimplePINN2(nn.Module):
 def build_model(cfg):
     m = cfg["model"]
     name = m["name"].lower()
+    device = cfg["device"]
     if name == "simple_pinn1":
         model_config = m['layers']
         return SimplePINN1(
@@ -90,15 +91,16 @@ def build_model(cfg):
             layers=model_config[1],
             hidden=model_config[2],
             output=model_config[3],
-        )
+        ).to(device)
     if name == "simple_pinn2":
             layers = m['layers']
-            return SimplePINN2(layers=layers)
+            return SimplePINN2(layers=layers).to(device)
     
     if name == "ffn":
         return dde.nn.FNN(
             m['layers'],
             m['activation'],
             m['initializer'],
-        )
+        ).to(device)
+    
     raise ValueError(f"Modelo desconhecido: {name}")

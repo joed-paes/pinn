@@ -49,6 +49,8 @@ def builder_burger(params):
     coords: tupla ou lista contendo (x, t)
     Residuo: u_t + u * u_x - nu * u_xx = 0
     """
+    bc_info = params["boundary"]
+    ic_type = params.get("ic_type", "sin")
     nu = params.get("nu", 0.0)
     n_x = params.get("n_x", 1.0)    # size of spatial domain (1D, n_x=1; 2D, n_x=2; ...)
     def residual(coords, u):
@@ -67,19 +69,46 @@ def builder_burger(params):
 
         return residual
 
-    # Initial condition: u(x,0) = -sin(pi*x)
+    # Function of initial condition
     # As t=0, it receives only x
     def ic_true_fn(x_coords):
-        return -torch.sin(torch.pi*x_coords)
+        functions = {
+            "sin": lambda x: -torch.sin(torch.pi*x),
+            "tanh": lambda x: 1 - 0.8*torch.tanh(2*x),  
+        }
+        u0 = functions.get(ic_type.lower(), functions["sin"])
+        return u0(x_coords)
 
-    # Boundary condition: u(-x_min, t)=0, u(x_max,t)=0
+    # Function derivative of initial condition
+    def ic_true_fn_prime(x_coords):
+        functions = {
+            "sin": lambda x: -torch.cos(torch.pi*x),
+            "tanh": lambda x: (8*torch.tanh(2*x)**2)/5 - 8/5,  
+        }
+        u0_prime = functions.get(ic_type.lower(), functions["sin"])
+        return u0_prime(x_coords)
+
+    # Boundary conditions
     # Receive the coordinates and return the expected value
     def bc_true_fn(x_coords, t_coords):
-        return torch.zeros_like(x_coords)
+        n_half = len(x_coords) // 2
+        functions = {
+            "sin": lambda n: torch.cat([torch.full((n,1), bc_info["u_left"]), torch.full((n,1), bc_info["u_right"])], dim=0),   # BCs: u(-x_min, t)=0.0, u(x_max,t)=0.0
+            "tanh": lambda n: torch.cat([torch.full((n,1), bc_info["u_left"]), torch.full((n,1), bc_info["u_right"])], dim=0),  # BCs: u(-x_min, t)=1.8, u(x_max,t)=0.2
+        }
+        bc = functions.get(ic_type.lower(), functions["sin"])
+        return bc(n_half)
 
     # Include Jacobian function in order to determine caustic geometry
     # Why here: because Jacobian in intrinsec from PDE itself
     # def jacobian(x_coords, t_coords)
+
+    def jacobian(x_coords, t_coords):
+        """
+        Jacobiano das características: J(x0,t) = 1 + t*u0'(x0)
+        O Jacobiano se anula na formação do choque.
+        """
+        return 1.0 + t_coords * ic_true_fn_prime(x_coords)
     
     return residual, ic_true_fn, bc_true_fn
 
