@@ -196,9 +196,9 @@ def train_one_epoch(pde_fn, ic_true_fn, bc_true_fn, params, model, sampling, opt
     u_bc = model(x_bc,x_bc)
 
     # True values
-    residual = pde_fn((x, t), u).to(device)
-    u_ic_true = ic_true_fn(x_ic).to(device)
-    u_bc_true = bc_true_fn(x_bc, t_bc).to(device)
+    residual = pde_fn((x, t), u).float().to(device)
+    u_ic_true = ic_true_fn(x_ic).float().to(device)
+    u_bc_true = bc_true_fn(x_bc, t_bc).float().to(device)
     
     optimizer.zero_grad(set_to_none=True)
     
@@ -254,6 +254,8 @@ def main():
                         help="Sobrescreve experiment.name_prefix")
     parser.add_argument("--epochs", type=int, default=None,
                         help="Sobrescreve epochs do config")
+    parser.add_argument("--device", type=str, default="cpu",
+                            help="Sobrescreve device do config")
     parser.add_argument("--no-tensorboard", action="store_true",
                         help="Envio de dados para o tensorboard")
     parser.add_argument("--dry-run", action="store_true",
@@ -266,6 +268,8 @@ def main():
         cfg.setdefault("experiment", {})["name_prefix"] = args.name
     if args.epochs is not None:
         cfg["epochs"] = args.epochs
+    if args.device is not None:
+            cfg["device"] = args.device
 
     # --- Initialization Writer - Tensorboard ---
     if cfg["tensorboard"]["enable"] and not args.no_tensorboard:

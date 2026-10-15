@@ -60,7 +60,7 @@ class SpatialTemporalDomain:
         # Ativa o rastreamento de gradientes para o calculo do Autograd
         x.requires_grad_(True)
         t.requires_grad_(True)
-        return x.to(self.device), t.to(self.device)
+        return x.float().to(self.device), t.float().to(self.device)
 
     def sample_initial(self):
         """Amostra pontos na linha temporal inicial (t = 0)."""
@@ -68,7 +68,7 @@ class SpatialTemporalDomain:
         # Geralmente mantido como uniforme ou linearmente espaçado para a condição inicial
         x = (self.x_max - self.x_min) * torch.rand((num_points, 1)) + self.x_min
         t = torch.zeros((num_points, 1)) + self.t_min
-        return x.to(self.device), t.to(self.device)
+        return x.float().to(self.device), t.float().to(self.device)
 
     def sample_boundary(self):
         """Amostra pontos nas bordas espaciais (x = x_min e x = x_max)."""
@@ -78,4 +78,4 @@ class SpatialTemporalDomain:
         x = torch.cat([x_left, x_right], dim=0)
         
         t = (self.t_max - self.t_min) * torch.rand((2*num_points, 1)) + self.t_min
-        return x.to(self.device), t.to(self.device)
+        return x.float().to(self.device), t.float().to(self.device)
